@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Load the handtrackjs model. -->
+<script src="https://cdn.jsdelivr.net/npm/handtrackjs/dist/handtrack.min.js"> </script>
+<!-- <script src="/lib/handtrack.min.js"> </script> -->
+<script src="HandSVG.js"></script>
+<video muted id="webcam"></video>
+<svg id="hand" xmlns="http://www.w3.org/2000/svg"></svg>
+<!-- Place your code in the script tag below. You can also use an external .js file -->
+<script>
+const webcam = document.querySelector('#webcam');
+let model, handSVG, w, h;
+async function renderPredictions() {
+  requestAnimationFrame(renderPredictions);
+  const predictions = await model.detect(webcam);
+  if (predictions.length > 0) {
+    if(!handSVG) {
+      handSVG = new HandSVG({w, h, id: 'hand'});
+      return;
+    }
+    handSVG.render(predictions[0]);
+  }
+}
+async function main() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    webcam.srcObject = stream;
+    await new Promise(function(res) {
+      webcam.onloadedmetadata = function() {
+        w = webcam.videoWidth;
+        h = webcam.videoHeight;
+        res();
+      }
+    });
+    
+    webcam.height = h;
+    webcam.width = w;
+    webcam.setAttribute('autoplay', true);
+    webcam.setAttribute('muted', true);
+    webcam.setAttribute('playsinline', true);
+    webcam.play();
+    
+    // Load the MediaPipe facemesh model.
+    model = await handTrack.load({
+      flipHorizontal: false,   // flip e.g for video 
+      imageScaleFactor: 0.5,  // reduce input image size for gains in speed.
+      maxNumBoxes: 1,        // maximum number of boxes to detect
+      iouThreshold: 0.5,      // ioU threshold for non-max suppression
+      scoreThreshold: 0.79,    // confidence threshold for predictions.
+    });
+    
+    renderPredictions();
+  } catch(e) {
+    console.error(e);
+  }
+}
+main();
+  
+</script>
+</body>
+</html>
